@@ -114,5 +114,3 @@ Open `frontend/index.html` directly in a browser, or serve it with any static se
 
 Built by [Mohsin Hassan](https://github.com/MohsinHassan-8) | CS graduate, GenAI/LLM engineer.
 
-\---
-
