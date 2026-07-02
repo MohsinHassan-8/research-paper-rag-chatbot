@@ -1,5 +1,5 @@
 // Point this at your deployed FastAPI backend before going live.
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://mohsin73-research-paper-rag-chatbot.hf.space/ask";
 
 // ---------- Theme toggle ----------
 const themeToggle = document.getElementById("theme-toggle");
