@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-teal)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
 Ask questions about a corpus of research papers and get grounded answers with page-level citations. Built with LangChain, Chroma, local HuggingFace embeddings, and Gemini, deployed with a FastAPI backend on Hugging Face Spaces and a static frontend on Vercel.
 
 **Live demo:** https://research-paper-rag-chatbot.vercel.app
