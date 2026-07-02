@@ -8,7 +8,7 @@ Ask questions about a corpus of research papers and get grounded answers with pa
 
 **Live demo:** https://research-paper-rag-chatbot.vercel.app
 
-![Marginalia demo](https://github.com/MohsinHassan-8/research-paper-rag-chatbot/blob/main/docs/Animation_1.gif)
+![Marginalia demo](https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNDB6OHlnanFmM2YzNTMzY20zd2dqd2RqNDhzMnF5MmZhcHUwdXNoaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5nLyMe2Gc2Pw8aJRL5/giphy.gif)
 
 ## What it does
 
