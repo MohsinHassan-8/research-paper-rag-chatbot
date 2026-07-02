@@ -1,58 +1,132 @@
-# Marginalia — RAG Chatbot for VERITAS Papers
+# Marginalia | RAG Chatbot for Research Papers
 
-A demo/portfolio site wrapping your existing LangChain RAG pipeline: FastAPI backend, plain HTML/CSS/JS frontend, warm beige/dark theme, source citations under every answer.
+!\[Python](https://img.shields.io/badge/python-3.11-blue)
+!\[FastAPI](https://img.shields.io/badge/FastAPI-backend-teal)
+Ask questions about a corpus of research papers and get grounded answers with page-level citations. Built with LangChain, Chroma, local HuggingFace embeddings, and Gemini, deployed with a FastAPI backend on Hugging Face Spaces and a static frontend on Vercel.
 
-## 1. Backend
+**Live demo:** https://research-paper-rag-chatbot.vercel.app
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+!\[Marginalia demo](docs/animation\_1.gif)
 
-cp .env.example .env            # then fill in GOOGLE_API_KEY (and HF_TOKEN if needed)
+\---
+
+## What it does
+
+Marginalia ingests a folder of research PDFs, indexes them into a vector store, and answers natural-language questions about them, returning both a grounded answer and the exact source documents/pages it drew from, so you can verify every claim.
+
+\---
+
+## Architecture
+
+```
+PDFs (eg\\\_dir/)
+   │
+   ▼
+Chunking (RecursiveCharacterTextSplitter)
+   │
+   ▼
+Local embeddings (BAAI/bge-small-en-v1.5 via HuggingFaceEmbeddings)
+   │
+   ▼
+Chroma vector store (persisted to disk)
+   │
+   ▼
+Per-document MMR retrieval  ──┐
+   │                          │
+   ▼                          ▼
+Context assembly       Source metadata (filename + page)
+   │                          │
+   ▼                          │
+Gemini/DeepSeek (generation)  │
+   │                          │
+   └──────────► Final answer + grouped citations
 ```
 
-Put your PDFs in `backend/eg_dir/` (matches `PDF_DIR` in `rag_pipeline.py`) — first run will chunk, embed, and persist them to `backend/sample_articles/`. Subsequent runs reuse that store instead of re-embedding.
+\---
 
-Run the API:
+## Engineering decisions
 
-```bash
-uvicorn main:app --reload --port 8000
-```
+* **Local embeddings, not API-based** : uses `HuggingFaceEmbeddings` (BGE) instead of a hosted embedding API, avoiding rate limits and per-call cost during indexing.
+* **Persisted vector store** : Chroma is only built once on first run; subsequent runs load the existing store instead of re-embedding the whole corpus from scratch.
+* **Per-document retrieval** : plain top-k similarity search let one dominant paper crowd out others in multi-paper comparison queries. Retrieval now samples fairly across every source document so comparative questions ("what's the best technique across these articles?") actually draw from all of them.
+* **Grouped source citations** : every answer returns filenames and page numbers, deduplicated and grouped per document, instead of a flat list of chunks.
+* **Deployed on Hugging Face Spaces, not a general PaaS** : the initial deploy hit a free-tier memory ceiling running local embedding models on Render; moved to Hugging Face Spaces, which is built for exactly this kind of ML workload.
+* **Cloud model flexibility:** The architecture enables seamless switching between the cloud-based Gemini API and DeepSeek-V4-Flash for text generation when the primary model reaches its usage limit.
 
-Check it's alive: `http://localhost:8000/health` → `{"status": "ok"}`
+\---
 
-## 2. Frontend
+## Tech stack
 
-No build step — it's static HTML/CSS/JS.
+* **Orchestration:** LangChain (LCEL / Runnables)
+* **Vector store:** Chroma
+* **Embeddings:** HuggingFace `BAAI/bge-small-en-v1.5`
+* **Generation:** Google Gemini 2.5 Flash / DeepSeek-V4-Flash
+* **Backend:** FastAPI
+* **Frontend:** Vanilla HTML / CSS / JavaScript
+* **Deployment:** Hugging Face Spaces (backend, Docker), Vercel (frontend)
 
-```bash
-cd frontend
-python -m http.server 5500
-```
+\---
 
-Open `http://localhost:5500`. If your backend runs anywhere other than `http://localhost:8000`, update `API_BASE_URL` at the top of `frontend/js/app.js`.
-
-## 3. Notes
-
-- **Local model toggle**: the UI already has a Cloud/Local pill switch. Cloud calls your existing Gemini chain. Local currently returns a 501 from the backend as a placeholder — wire up an Ollama-backed chain in `rag_pipeline.py` and branch on `model_mode` in `main.py`'s `/ask` route when you're ready.
-- **CORS**: `main.py` currently allows all origins (`"*"`) for easy local testing. Before sharing a public link, set `allow_origins` to your deployed frontend's exact domain.
-- **Corpus**: fixed at the PDFs you index at startup (VERITAS papers, per the brief). No upload UI yet — that's real-product territory, not demo territory.
-- **Deploy**: frontend → Vercel/Netlify (drag-and-drop the `frontend/` folder). Backend → Render/Railway, or your existing AWS EC2/Docker setup.
-
-## Structure
+## Project structure
 
 ```
 project/
 ├── backend/
-│   ├── main.py           # FastAPI app: POST /ask, GET /health
-│   ├── rag_pipeline.py   # your existing RAG chain, unchanged
+│   ├── main.py              # FastAPI app exposing /ask and /health
+│   ├── rag\\\_pipeline.py      # ingestion, retrieval, and generation chain
 │   ├── requirements.txt
-│   └── .env.example
+│   └── .env.example         # template for required environment variables
 └── frontend/
     ├── index.html
     ├── css/style.css
-    ├── js/app.js
-    └── assets/favicon.svg
+    └── js/app.js
 ```
+
+\---
+
+## Running it locally
+
+**Backend:**
+
+```bash
+cd backend
+python -m venv venv
+venv\\\\Scripts\\\\activate        # on Windows
+# source venv/bin/activate   # on macOS/Linux
+
+pip install -r requirements.txt
+```
+
+Create a `.env` file in `backend/` based on `.env.example`:
+
+```
+GOOGLE\\\_API\\\_KEY=your\\\_gemini\\\_api\\\_key\\\_here
+HF\\\_TOKEN=your\\\_huggingface\\\_token\\\_here
+```
+
+Add your PDF corpus to `backend/eg\\\_dir/`, then run:
+
+```bash
+uvicorn main:app --reload
+```
+
+The API will be available at `http://localhost:8000`, with interactive docs at `http://localhost:8000/docs`.
+
+**Frontend:**
+Open `frontend/index.html` directly in a browser, or serve it with any static server. Update `API\\\_URL` in `frontend/js/app.js` to point at your local backend (`http://localhost:8000/ask`) for local testing.
+
+\---
+
+## Notes
+
+* **CORS**: locked to the deployed frontend's exact domain in production (`main.py`). For local development, temporarily widen `allow\\\_origins` if needed.
+* **First request after inactivity** may be slow as the free-tier Hugging Face Space spins down when idle and takes a short time to wake up.
+
+\---
+
+## Author
+
+Built by [Mohsin Hassan](https://github.com/MohsinHassan-8) | CS graduate, GenAI/LLM engineer.
+
+\---
+
